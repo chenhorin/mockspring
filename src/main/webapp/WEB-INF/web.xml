@@ -28,10 +28,12 @@
   <display-name>HORIN WEB APPLICATION</display-name>
 
   <servlet>
-    <description>Cocoon blocks dispatcher</description>
-    <display-name>DispatcherServlet</display-name>
-    <servlet-name>DispatcherServlet</servlet-name>
-    <servlet-class>top.hrfeat.mvcframework.servlet.GPDispatcherServlet</servlet-class>
+    <servlet-name>hrmvc</servlet-name>
+    <servlet-class>top.hrfeat.mvcframework.servlet.HRDispatcherServlet</servlet-class>
+    <init-param>
+      <param-name>contextConfigLocation</param-name>
+      <param-value>application.properties</param-value>
+    </init-param>
     <load-on-startup>1</load-on-startup>
   </servlet>
 
@@ -44,7 +46,7 @@
     - to change this parameter.
     -->
   <servlet-mapping>
-    <servlet-name>DispatcherServlet</servlet-name>
+    <servlet-name>hrmvc</servlet-name>
     <url-pattern>/*</url-pattern>
   </servlet-mapping>
 
