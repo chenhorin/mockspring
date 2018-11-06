@@ -1,13 +1,15 @@
 package top.hrfeat.demo.service.impl;
 
 import top.hrfeat.demo.service.IDemoService;
+import top.hrfeat.mvcframework.annotation.HRService;
 
 /**
  * @Author: 81247
  * @Description: ${Description}
  */
-public class demoServiceImpl implements IDemoService     {
+@HRService("iDemoService")
+public class DemoServiceImpl implements IDemoService     {
     public String get(String name) {
-        return name;
+        return name+":hello godfather";
     }
 }

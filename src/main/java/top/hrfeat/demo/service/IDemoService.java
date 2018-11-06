@@ -8,7 +8,7 @@ import javax.naming.Name;
  * @Author: 81247
  * @Description: ${Description}
  */
-@HRService
+
 public interface IDemoService {
     String get(String Name);
 }

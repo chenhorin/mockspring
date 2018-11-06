@@ -10,7 +10,6 @@ import javax.servlet.ServletException;
 import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
-import javax.swing.*;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
@@ -35,7 +34,6 @@ public class HRDispatcherServlet extends HttpServlet {
     private Map<String, Method> handleMapping = new HashMap<String, Method>();
 
 
-
     public HRDispatcherServlet() {
         super();
     }
@@ -54,7 +52,7 @@ public class HRDispatcherServlet extends HttpServlet {
 
         initHandleMapping();
 
-        System.out.println("mvc framework has init");
+        System.out.println("-------------------------------mvc framework has init");
     }
 
     private void initHandleMapping() {
@@ -71,10 +69,22 @@ public class HRDispatcherServlet extends HttpServlet {
 //            获取controller的url配置
             if (clazz.isAnnotationPresent(HRRequestMapping.class)) {
                 HRRequestMapping mapping = clazz.getAnnotation(HRRequestMapping.class);
-                baseUrl = mapping.value();
+                baseUrl = mapping.value().replaceAll("/+", "/");
             }
 
             Method[] methods = clazz.getMethods();
+            for (Method method : methods) {
+                if (!method.isAnnotationPresent(HRRequestMapping.class)) {
+                    continue;
+                }
+                HRRequestMapping requestMapping = method.getAnnotation(HRRequestMapping.class);
+                System.out.println("baseUrl :  " + baseUrl);
+                System.out.println("requestMapping.value() : " + requestMapping.value());
+                String url = (baseUrl + requestMapping.value().replaceAll("/+", "/"));
+                handleMapping.put(url, method);
+                System.out.println("mapping:  " + url + "   :   " + method);
+
+            }
         }
     }
 
@@ -83,7 +93,7 @@ public class HRDispatcherServlet extends HttpServlet {
             return;
         }
         for (Map.Entry<String, Object> entry : ioc.entrySet()) {
-            Field[] fields = entry.getClass().getDeclaredFields();
+            Field[] fields = entry.getValue().getClass().getDeclaredFields();
             for (Field field : fields) {
 
                 if (!field.isAnnotationPresent(HRAutowired.class)) {
@@ -92,11 +102,12 @@ public class HRDispatcherServlet extends HttpServlet {
                 HRAutowired autowired = field.getAnnotation(HRAutowired.class);
                 String beanName = autowired.value().trim();
                 if ("".equals(beanName)) {
-                    beanName = field.getType().getName();
+                    beanName = lowerFirstCase(field.getType().getSimpleName());
+                    System.out.println("beanName......." + beanName);
                 }
                 field.setAccessible(true);
                 try {
-                    field.set(entry.getValue(),ioc.get(beanName));
+                    field.set(entry.getValue(), ioc.get(beanName));
                 } catch (IllegalAccessException e) {
                     e.printStackTrace();
                     continue;
@@ -114,8 +125,7 @@ public class HRDispatcherServlet extends HttpServlet {
             for (String className : classNames) {
                 Class<?> clazz = Class.forName(className);
                 if (clazz.isAnnotationPresent(HRController.class)) {
-                    String beanName = lowerFirstCase(className);
-                    System.out.println(beanName);
+                    String beanName = lowerFirstCase(clazz.getSimpleName());
                     ioc.put(beanName, clazz.newInstance());
                 } else if (clazz.isAnnotationPresent(HRService.class)) {
                     HRService service = clazz.getAnnotation(HRService.class);
@@ -140,7 +150,7 @@ public class HRDispatcherServlet extends HttpServlet {
         }
     }
 
-//    首字母小写
+    //    首字母小写
     private String lowerFirstCase(String str) {
         char[] chars = str.toCharArray();
         chars[0] += 32;
@@ -161,7 +171,7 @@ public class HRDispatcherServlet extends HttpServlet {
 
     private void doLoad(String initParameter) {
         InputStream in = null;
-        in = this.getClass().getClassLoader().getResourceAsStream(LOCATION);
+        in = this.getClass().getClassLoader().getResourceAsStream(initParameter);
         try {
             p.load(in);
         } catch (IOException e) {
@@ -180,11 +190,78 @@ public class HRDispatcherServlet extends HttpServlet {
 
     @Override
     public void doGet(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
-        super.doGet(req, resp);
+        this.doPost(req, resp);
     }
 
     @Override
     public void doPost(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
-        super.doPost(req, resp);
+        try {
+            doDispatch(req, resp);
+        } catch (Exception e) {
+            resp.getWriter().write("500 Exception , Detail:\r\n" + Arrays.toString(e.getStackTrace())
+                    .replaceAll("\\[|\\]", "").replaceAll(",\\s", "\r\n"));
+        }
+    }
+
+    private void doDispatch(HttpServletRequest req, HttpServletResponse resp) throws Exception {
+        if (this.handleMapping.isEmpty()) {
+            return;
+        }
+
+        String url = req.getRequestURI();
+        String contextPath = req.getContextPath();
+
+        System.out.println("context" + contextPath);
+        url = url.replace(contextPath, "").replaceAll("/+", "/");
+        System.out.println("我是url" + url);
+
+        for (Map.Entry<String, Method> stringMethodEntry : handleMapping.entrySet()) {
+            System.out.println(" handleMapping ：" + stringMethodEntry.getKey() + " : " + stringMethodEntry.getValue());
+        }
+        if (!this.handleMapping.containsKey(url)) {
+            resp.getWriter().write("404 , not found");
+            return;
+        }
+        Map<String, String[]> parameterMap = req.getParameterMap();
+
+        /*Map<String, String[]> parameterMap = req.getParameterMap();
+        for (Map.Entry<String, String[]> stringEntry : parameterMap.entrySet()) {
+            System.out.println("key参数类型"+stringEntry.getKey());
+            System.out.print("value :");
+            for (String s : stringEntry.getValue()) {
+                System.out.println(s);
+            }
+        }*/
+        Method method = this.handleMapping.get(url);
+        System.out.println("被调用的method" + method);
+
+        Class<?>[] parameterTypes = method.getParameterTypes();
+        for (Class<?> parameterType : parameterTypes) {
+            System.out.println("我是入参的参数类型" + parameterType.getName());
+        }
+
+        Object[] paramValues = new Object[parameterTypes.length];
+
+        for (int i = 0; i < parameterTypes.length; i++) {
+            Class parameterType = parameterTypes[i];
+
+            if (parameterType == HttpServletRequest.class) {
+                paramValues[i] = req;
+                continue;
+            } else if (parameterType == HttpServletResponse.class) {
+                paramValues[i] = resp;
+                continue;
+            } else if (parameterType == String.class) {
+                for (Map.Entry<String, String[]> param : parameterMap.entrySet()) {
+                    String value = Arrays.toString(param.getValue())
+                            .replaceAll("\\[|\\]", "")
+                            .replaceAll(",\\s", ",");
+                    paramValues[i] = value;
+                }
+            }
+        }
+
+        String beanName = lowerFirstCase(method.getDeclaringClass().getSimpleName());
+        method.invoke(this.ioc.get(beanName), paramValues);
     }
 }

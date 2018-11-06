@@ -25,30 +25,30 @@
          xmlns="http://java.sun.com/xml/ns/j2ee"
          xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
          xsi:schemaLocation="http://java.sun.com/xml/ns/j2ee http://java.sun.com/xml/ns/j2ee/web-app_2_4.xsd">
-  <display-name>HORIN WEB APPLICATION</display-name>
+    <display-name>HORIN WEB APPLICATION</display-name>
 
-  <servlet>
-    <servlet-name>hrmvc</servlet-name>
-    <servlet-class>top.hrfeat.mvcframework.servlet.HRDispatcherServlet</servlet-class>
-    <init-param>
-      <param-name>contextConfigLocation</param-name>
-      <param-value>application.properties</param-value>
-    </init-param>
-    <load-on-startup>1</load-on-startup>
-  </servlet>
+    <servlet>
+        <servlet-name>hrmvc</servlet-name>
+        <servlet-class>top.hrfeat.mvcframework.servlet.HRDispatcherServlet</servlet-class>
+        <init-param>
+            <param-name>contextConfigLocation</param-name>
+            <param-value>application.properties</param-value>
+        </init-param>
+        <load-on-startup>1</load-on-startup>
+    </servlet>
 
-  <!-- URL space mappings ============================================= -->
+    <!-- URL space mappings ============================================= -->
 
-  <!--
-    - Cocoon handles all the URL space assigned to the webapp using its sitemap.
-    - It is recommended to leave it unchanged. Under some circumstances though
-    - (like integration with proprietary webapps or servlets) you might have
-    - to change this parameter.
-    -->
-  <servlet-mapping>
-    <servlet-name>hrmvc</servlet-name>
-    <url-pattern>/*</url-pattern>
-  </servlet-mapping>
+    <!--
+      - Cocoon handles all the URL space assigned to the webapp using its sitemap.
+      - It is recommended to leave it unchanged. Under some circumstances though
+      - (like integration with proprietary webapps or servlets) you might have
+      - to change this parameter.
+      -->
+    <servlet-mapping>
+        <servlet-name>hrmvc</servlet-name>
+        <url-pattern>/*</url-pattern>
+    </servlet-mapping>
 
 </web-app>
         
