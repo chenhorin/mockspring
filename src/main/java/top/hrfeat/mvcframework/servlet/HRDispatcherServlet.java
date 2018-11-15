@@ -55,64 +55,35 @@ public class HRDispatcherServlet extends HttpServlet {
         System.out.println("-------------------------------mvc framework has init");
     }
 
-    private void initHandleMapping() {
-        if (ioc.isEmpty()) {
-            return;
-        }
-        for (Map.Entry<String, Object> entry : ioc.entrySet()) {
-            Class<?> clazz = entry.getValue().getClass();
-            if (!clazz.isAnnotationPresent(HRController.class)) {
-                continue;
-            }
-
-            String baseUrl = "";
-//            获取controller的url配置
-            if (clazz.isAnnotationPresent(HRRequestMapping.class)) {
-                HRRequestMapping mapping = clazz.getAnnotation(HRRequestMapping.class);
-                baseUrl = mapping.value().replaceAll("/+", "/");
-            }
-
-            Method[] methods = clazz.getMethods();
-            for (Method method : methods) {
-                if (!method.isAnnotationPresent(HRRequestMapping.class)) {
-                    continue;
+    private void doLoad(String initParameter) {
+        InputStream in = null;
+        in = this.getClass().getClassLoader().getResourceAsStream(initParameter);
+        try {
+            p.load(in);
+        } catch (IOException e) {
+            e.printStackTrace();
+        } finally {
+            if (null != in) {
+                try {
+                    in.close();
+                } catch (IOException e) {
+                    e.printStackTrace();
                 }
-                HRRequestMapping requestMapping = method.getAnnotation(HRRequestMapping.class);
-                System.out.println("baseUrl :  " + baseUrl);
-                System.out.println("requestMapping.value() : " + requestMapping.value());
-                String url = (baseUrl + requestMapping.value().replaceAll("/+", "/"));
-                handleMapping.put(url, method);
-                System.out.println("mapping:  " + url + "   :   " + method);
-
             }
         }
+
     }
 
-    private void doAutowired() {
-        if (ioc.isEmpty()) {
-            return;
-        }
-        for (Map.Entry<String, Object> entry : ioc.entrySet()) {
-            Field[] fields = entry.getValue().getClass().getDeclaredFields();
-            for (Field field : fields) {
-
-                if (!field.isAnnotationPresent(HRAutowired.class)) {
-                    continue;
-                }
-                HRAutowired autowired = field.getAnnotation(HRAutowired.class);
-                String beanName = autowired.value().trim();
-                if ("".equals(beanName)) {
-                    beanName = lowerFirstCase(field.getType().getSimpleName());
-                    System.out.println("beanName......." + beanName);
-                }
-                field.setAccessible(true);
-                try {
-                    field.set(entry.getValue(), ioc.get(beanName));
-                } catch (IllegalAccessException e) {
-                    e.printStackTrace();
-                    continue;
-                }
-
+    private void doScanner(String scanPackage) {
+        URL url = this.getClass().getClassLoader().
+                getResource("/" + scanPackage.replaceAll("\\.", "/"));
+        File dir = new File(url.getFile());
+        for (File file : dir.listFiles()) {
+            if (file.isDirectory()) {
+                doScanner(scanPackage + "." + file.getName());
+            } else {
+                classNames.add(scanPackage + "." + file.getName()
+                        .replace(".class", "").trim());
             }
         }
     }
@@ -150,42 +121,74 @@ public class HRDispatcherServlet extends HttpServlet {
         }
     }
 
+    private void doAutowired() {
+        if (ioc.isEmpty()) {
+            return;
+        }
+        for (Map.Entry<String, Object> entry : ioc.entrySet()) {
+            Field[] fields = entry.getValue().getClass().getDeclaredFields();
+            for (Field field : fields) {
+
+                if (!field.isAnnotationPresent(HRAutowired.class)) {
+                    continue;
+                }
+                HRAutowired autowired = field.getAnnotation(HRAutowired.class);
+                String beanName = autowired.value().trim();
+                if ("".equals(beanName)) {
+                    beanName = lowerFirstCase(field.getType().getSimpleName());
+                    System.out.println("beanName......." + beanName);
+                }
+                field.setAccessible(true);
+                try {
+                    field.set(entry.getValue(), ioc.get(beanName));
+                } catch (IllegalAccessException e) {
+                    e.printStackTrace();
+                    continue;
+                }
+
+            }
+        }
+    }
+    private void initHandleMapping() {
+        if (ioc.isEmpty()) {
+            return;
+        }
+        for (Map.Entry<String, Object> entry : ioc.entrySet()) {
+            Class<?> clazz = entry.getValue().getClass();
+            if (!clazz.isAnnotationPresent(HRController.class)) {
+                continue;
+            }
+
+            String baseUrl = "";
+//            获取controller的url配置
+            if (clazz.isAnnotationPresent(HRRequestMapping.class)) {
+                HRRequestMapping mapping = clazz.getAnnotation(HRRequestMapping.class);
+                baseUrl = mapping.value().replaceAll("/+", "/");
+            }
+
+            Method[] methods = clazz.getMethods();
+            for (Method method : methods) {
+                if (!method.isAnnotationPresent(HRRequestMapping.class)) {
+                    continue;
+                }
+                HRRequestMapping requestMapping = method.getAnnotation(HRRequestMapping.class);
+                System.out.println("baseUrl :  " + baseUrl);
+                System.out.println("requestMapping.value() : " + requestMapping.value());
+                String url = (baseUrl + requestMapping.value().
+                        replaceAll("/+", "/"));
+                handleMapping.put(url, method);
+                System.out.println("mapping:  " + url + "   :   " + method);
+
+            }
+        }
+    }
+
     //    首字母小写
+
     private String lowerFirstCase(String str) {
         char[] chars = str.toCharArray();
         chars[0] += 32;
         return String.valueOf(chars);
-    }
-
-    private void doScanner(String scanPackage) {
-        URL url = this.getClass().getClassLoader().getResource("/" + scanPackage.replaceAll("\\.", "/"));
-        File dir = new File(url.getFile());
-        for (File file : dir.listFiles()) {
-            if (file.isDirectory()) {
-                doScanner(scanPackage + "." + file.getName());
-            } else {
-                classNames.add(scanPackage + "." + file.getName().replace(".class", "").trim());
-            }
-        }
-    }
-
-    private void doLoad(String initParameter) {
-        InputStream in = null;
-        in = this.getClass().getClassLoader().getResourceAsStream(initParameter);
-        try {
-            p.load(in);
-        } catch (IOException e) {
-            e.printStackTrace();
-        } finally {
-            if (null != in) {
-                try {
-                    in.close();
-                } catch (IOException e) {
-                    e.printStackTrace();
-                }
-            }
-        }
-
     }
 
     @Override
@@ -198,8 +201,10 @@ public class HRDispatcherServlet extends HttpServlet {
         try {
             doDispatch(req, resp);
         } catch (Exception e) {
-            resp.getWriter().write("500 Exception , Detail:\r\n" + Arrays.toString(e.getStackTrace())
-                    .replaceAll("\\[|\\]", "").replaceAll(",\\s", "\r\n"));
+            resp.getWriter().
+                    write("500 Exception , Detail:\r\n" + Arrays.toString(e.getStackTrace())
+                    .replaceAll("\\[|\\]", "").
+                                    replaceAll(",\\s", "\r\n"));
         }
     }
 
@@ -216,7 +221,8 @@ public class HRDispatcherServlet extends HttpServlet {
         System.out.println("我是url" + url);
 
         for (Map.Entry<String, Method> stringMethodEntry : handleMapping.entrySet()) {
-            System.out.println(" handleMapping ：" + stringMethodEntry.getKey() + " : " + stringMethodEntry.getValue());
+            System.out.println(" handleMapping ：" + stringMethodEntry.
+                    getKey() + " : " + stringMethodEntry.getValue());
         }
         if (!this.handleMapping.containsKey(url)) {
             resp.getWriter().write("404 , not found");
